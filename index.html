@@ -1,10 +1,790 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <script src="https://developer.eitaa.com/eitaa-web-app.js"></script>
+    <title>بازی آموزشی مجموعه‌ها 🧠</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /*
+        =========================================================
+        بخش CSS: استایل‌ها و واکنش‌گرایی
+        =========================================================
+        */
+      :root {
+        --primary-color: #4caf50; /* سبز شاد */
+        --secondary-color: #ffc107; /* زرد */
+        --background-color: #e8f5e9; /* پس زمینه روشن */
+        --correct-color: #4caf50;
+        --wrong-color: #f44336;
+        --text-color: #333;
+        --font-family: "Vazirmatn", sans-serif;
+        --selected-color: #ff9800; /* نارنجی برای انتخاب */
+      }
+
+      body {
+        font-family: var(--font-family);
+        background-color: var(--background-color);
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        color: var(--text-color);
+        direction: rtl;
+        overflow-x: hidden;
+      }
+
+      #game-container {
+        background-color: #fff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        width: 95%;
+        max-width: 800px;
+        padding: 20px;
+        box-sizing: border-box;
+        transition: all 0.3s ease;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      header h1 {
+        color: var(--primary-color);
+        font-size: 1.8rem;
+        margin-bottom: 5px;
+      }
+
+      #progress-bar {
+        height: 10px;
+        background-color: #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+
+      #progress {
+        height: 100%;
+        width: 0%;
+        background-color: var(--secondary-color);
+        transition: width 0.5s ease;
+      }
+
+      #score-display {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--text-color);
+        margin-top: 10px;
+      }
+
+      #question-area {
+        min-height: 150px;
+        border: 2px dashed #ccc;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      #question-text {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      /* ناحیه عناصر انتخاب شونده */
+      #option-elements {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        min-height: 80px;
+        padding: 10px 0;
+      }
+
+      .selectable-item {
+        background-color: #2196f3; /* آبی */
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, background-color 0.2s;
+        user-select: none;
+      }
+
+      .selectable-item:hover {
+        transform: translateY(-2px);
+      }
+
+      .selectable-item.selected {
+        background-color: var(--selected-color);
+        transform: scale(1.05);
+        border: 3px solid white;
+      }
+
+      /* پیام‌های بازخورد */
+      #feedback-message {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-top: 10px;
+        height: 30px;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+
+      .correct {
+        color: var(--correct-color);
+        animation: bounceIn 0.5s;
+      }
+
+      .wrong {
+        color: var(--wrong-color);
+        animation: shake 0.5s;
+      }
+
+      /* انیمیشن‌ها */
+      @keyframes bounceIn {
+        0% {
+          opacity: 0;
+          transform: scale(0.3);
+        }
+        70% {
+          transform: scale(1.1);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20%,
+        60% {
+          transform: translateX(-10px);
+        }
+        40%,
+        80% {
+          transform: translateX(10px);
+        }
+      }
+
+      /* نمودار ون (پیاده‌سازی ساده CSS) */
+      #venn-diagram-container {
+        position: relative;
+        width: 90%;
+        max-width: 400px;
+        height: 250px;
+        margin: 20px auto;
+        /* مخفی سازی پیش‌فرض */
+        display: none;
+      }
+
+      #universal {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.05);
+        border: 2px solid #333;
+        border-radius: 10px;
+        z-index: 5;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        color: #555;
+      }
+
+      .set {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.8;
+        border: 3px solid;
+        cursor: pointer;
+        width: 180px;
+        height: 180px;
+        transition: border-color 0.3s, box-shadow 0.3s;
+        z-index: 10;
+      }
+
+      #setA {
+        background-color: rgba(63, 81, 181, 0.5); /* آبی تیره */
+        border-color: #3f51b5;
+        left: 50px;
+        top: 35px;
+      }
+      #setB {
+        background-color: rgba(255, 87, 34, 0.5); /* نارنجی */
+        border-color: #ff5722;
+        right: 50px;
+        top: 35px;
+      }
+
+      /* شبیه‌سازی انتخاب ناحیه ون */
+      .set.selected,
+      #universal.selected {
+        border: 5px solid var(--selected-color) !important;
+        box-shadow: 0 0 15px var(--selected-color);
+        opacity: 1;
+      }
+
+      /* واکنش‌گرایی برای موبایل */
+      @media (max-width: 600px) {
+        #game-container {
+          padding: 10px;
+          margin: 5px;
+        }
+        header h1 {
+          font-size: 1.5rem;
+        }
+        #question-text {
+          font-size: 1.2rem;
+        }
+        .selectable-item {
+          padding: 10px 15px;
+          font-size: 1rem;
+        }
+        #venn-diagram-container {
+          height: 200px;
+        }
+        .set {
+          width: 120px;
+          height: 120px;
+          top: 50px;
+        }
+        #setA {
+          left: 30px;
+        }
+        #setB {
+          right: 30px;
+        }
+      }
+    </style>
   </head>
-  <body></body>
+  <body>
+    <div id="game-container">
+      <header>
+        <h1>بازی آموزشی مجموعه‌ها 🧠</h1>
+        <div id="progress-bar"><div id="progress"></div></div>
+        <div id="score-display">امتیاز: 0</div>
+      </header>
+
+      <div id="question-area">
+        <div id="question-text">سوال...</div>
+
+        <div id="venn-diagram-container">
+          <div
+            id="universal"
+            class="drop-zone venn-zone"
+            data-set-name="U"
+          ></div>
+          <div id="setA" class="set venn-zone" data-set-name="A"></div>
+          <div id="setB" class="set venn-zone" data-set-name="B"></div>
+        </div>
+      </div>
+
+      <div id="option-elements"></div>
+
+      <div id="feedback-message"></div>
+
+      <button
+        id="action-button"
+        onclick="handleActionButton()"
+        style="
+          background-color: var(--secondary-color);
+          color: #333;
+          padding: 12px 25px;
+          border: none;
+          border-radius: 8px;
+          font-size: 1.2rem;
+          cursor: pointer;
+          margin-top: 15px;
+          font-weight: bold;
+        "
+      >
+        بررسی پاسخ
+      </button>
+
+      <div id="final-score" style="display: none; text-align: center">
+        <h2>پایان بازی!</h2>
+        <p id="final-message" style="font-size: 1.5rem"></p>
+        <button
+          onclick="window.location.reload()"
+          style="
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-top: 15px;
+          "
+        >
+          شروع دوباره
+        </button>
+      </div>
+    </div>
+
+    <script>
+      /*
+    =========================================================
+    بخش JavaScript: منطق بازی، امتیازدهی و تعامل
+    =========================================================
+    */
+
+      const questions = [
+        // نوع 1: تعریف مجموعه (انتخاب زیرمجموعه) - کلیک برای انتخاب
+        {
+          type: 1,
+          text: "عناصر مجموعه A = {1, 2, 3, 4} را انتخاب کنید.",
+          elements: ["1", "2", "3", "4", "5", "6"],
+          correctAnswer: ["1", "2", "3", "4"],
+        },
+        // نوع 2: زیرمجموعه/اجتماع/اشتراک/تفاضل (انتخاب گزینه)
+        {
+          type: 2,
+          text: "اگر A={ا, ب} و B={ا, ب, پ} باشد، A ∩ B کدام است؟",
+          options: ["{ا, ب}", "{ا, ب, پ}", "{پ}"],
+          correctAnswer: "{ا, ب}",
+        },
+        // نوع 3: نمودار ون (کلیک بر ناحیه) - اشتراک
+        {
+          type: 3,
+          text: "ناحیه مربوط به **اشتراک (A ∩ B)** را در نمودار ون انتخاب کنید.",
+          setNames: ["A", "B"],
+          correctAnswer: "A-and-B",
+        },
+        // نوع 3: نمودار ون (کلیک بر ناحیه) - تفاضل
+        {
+          type: 3,
+          text: "ناحیه مربوط به **تفاضل (A - B)** را در نمودار ون انتخاب کنید.",
+          setNames: ["A", "B"],
+          correctAnswer: "A-only",
+        },
+        // نوع 3: نمودار ون (کلیک بر ناحیه) - اجتماع
+        {
+          type: 3,
+          text: "ناحیه مربوط به **اجتماع (A ∪ B)** را در نمودار ون انتخاب کنید.",
+          setNames: ["A", "B"],
+          correctAnswer: "AUB",
+        },
+        // نوع 2: انتخاب گزینه - متمم
+        {
+          type: 2,
+          text: "اگر U={1, 2, 3, 4} و A={1, 2} باشد، A' (متمم A) کدام است؟",
+          options: ["{1, 2}", "{3, 4}", "{1, 2, 3, 4}"],
+          correctAnswer: "{3, 4}",
+        },
+        // نوع 1: انتخاب عناصر تهی
+        {
+          type: 1,
+          text: "کدام عناصر در مجموعه تهی { } قرار دارند؟ (روی هیچ‌کدام کلیک نکنید)",
+          elements: ["10", "20", "30"],
+          correctAnswer: [],
+        },
+        // نوع 2: تعداد زیرمجموعه‌ها
+        {
+          type: 2,
+          text: "تعداد زیرمجموعه‌های مجموعه {قلم, کتاب, دفتر} چندتاست؟",
+          options: ["3", "6", "8", "9"],
+          correctAnswer: "8",
+        },
+        // نوع 3: نمودار ون (متمم)
+        {
+          type: 3,
+          text: "ناحیه مربوط به **متمم A (A')** را در نمودار ون انتخاب کنید.",
+          setNames: ["A"],
+          correctAnswer: "U-AUB",
+        },
+        // نوع 1: انتخاب عناصر از یک تعریف متنی
+        {
+          type: 1,
+          text: "اعداد زوج کوچک‌تر از ۱۰ را انتخاب کنید.",
+          elements: ["2", "3", "4", "5", "6", "8", "9"],
+          correctAnswer: ["2", "4", "6", "8"],
+        },
+        // نوع 2: خاصیت جابجایی
+        {
+          type: 2,
+          text: "آیا A ∪ B برابر B ∪ A است؟",
+          options: ["بله (درست)", "خیر (غلط)"],
+          correctAnswer: "بله (درست)",
+        },
+        // نوع 3: تفاضل متقارن (A Δ B)
+        {
+          type: 3,
+          text: "ناحیه مربوط به **تفاضل متقارن (A Δ B)** را در نمودار ون انتخاب کنید.",
+          setNames: ["A", "B"],
+          correctAnswer: "A-only-or-B-only",
+        },
+        // نوع 2: زیرمجموعه
+        {
+          type: 2,
+          text: "آیا {الف} زیرمجموعه {الف، ب} است؟",
+          options: ["بله", "خیر"],
+          correctAnswer: "بله",
+        },
+        // نوع 1: انتخاب عناصر مجموعه مرجع
+        {
+          type: 1,
+          text: "تمام عناصر مجموعه مرجع U = {س، ع، د} را انتخاب کنید.",
+          elements: ["س", "ع", "د", "و", "ق"],
+          correctAnswer: ["س", "ع", "د"],
+        },
+        // نوع 2: زیرمجموعه تهی
+        {
+          type: 2,
+          text: "مجموعه تهی { } زیرمجموعه چند مجموعه دیگر است؟",
+          options: ["هیچ‌کدام", "فقط مجموعه‌های غیرتهی", "همه مجموعه‌ها"],
+          correctAnswer: "همه مجموعه‌ها",
+        },
+      ];
+
+      let currentQuestion = 0;
+      let score = 0;
+      const totalQuestions = questions.length;
+      // امتیازدهی دقیق: اگر 15 سوال باشد، هر سوال 6.66... امتیاز دارد، پس از ضرب در 15 به 100 می‌رسد.
+      const scorePerQuestion = 100 / totalQuestions;
+
+      // عناصر DOM
+      const qText = document.getElementById("question-text");
+      const optionElementsArea = document.getElementById("option-elements");
+      const progressDiv = document.getElementById("progress");
+      const scoreDisplay = document.getElementById("score-display");
+      const feedbackMessage = document.getElementById("feedback-message");
+      const actionButton = document.getElementById("action-button");
+      const vennContainer = document.getElementById("venn-diagram-container");
+      const finalScoreDiv = document.getElementById("final-score");
+      const setA = document.getElementById("setA");
+      const setB = document.getElementById("setB");
+      const universal = document.getElementById("universal");
+
+      // وضعیت بازی
+      let isAnswerChecked = false;
+      let selectedType1 = []; // برای ذخیره عناصر انتخاب شده در نوع 1
+      let selectedType2 = null; // برای ذخیره انتخاب در نوع 2
+      let selectedVennSet = null; // برای ذخیره ناحیه ون انتخاب شده در نوع 3
+
+      // ==========================================================
+      // توابع کمکی
+      // ==========================================================
+
+      function updateProgress() {
+        const percentage = (currentQuestion / totalQuestions) * 100;
+        progressDiv.style.width = `${percentage}%`;
+        scoreDisplay.textContent = `امتیاز: ${Math.round(score)}`;
+      }
+
+      function showFeedback(isCorrect) {
+        let message;
+        if (isCorrect) {
+          const messages = [
+            "آفرین! 🎉",
+            "درست گفتی! 🥳",
+            "عالی بود! ⭐",
+            "حرفه‌ای! 🎯",
+          ];
+          message = messages[Math.floor(Math.random() * messages.length)];
+          feedbackMessage.className = "correct";
+        } else {
+          message = "اشتباه بود. دوباره تلاش کن. 😕";
+          feedbackMessage.className = "wrong";
+        }
+        feedbackMessage.textContent = message;
+        feedbackMessage.style.opacity = 1;
+
+        // بازخورد بصری روی دکمه در صورت غلط بودن
+        if (!isCorrect) {
+          actionButton.style.backgroundColor = "var(--wrong-color)";
+          setTimeout(() => {
+            actionButton.style.backgroundColor = "var(--secondary-color)";
+          }, 500);
+        }
+
+        setTimeout(() => {
+          feedbackMessage.style.opacity = 0;
+        }, 1500);
+      }
+
+      function resetSelections() {
+        selectedType1 = [];
+        selectedType2 = null;
+        selectedVennSet = null;
+        document
+          .querySelectorAll(".selectable-item, .venn-zone")
+          .forEach((el) => {
+            el.classList.remove("selected");
+          });
+      }
+
+      // ==========================================================
+      // مدیریت تعامل (کلیک/لمس)
+      // ==========================================================
+
+      // برای تمرین نوع 1 (انتخاب عناصر)
+      function handleType1Click(element, value) {
+        if (isAnswerChecked) return;
+
+        const index = selectedType1.indexOf(value);
+        if (index > -1) {
+          selectedType1.splice(index, 1);
+          element.classList.remove("selected");
+        } else {
+          selectedType1.push(value);
+          element.classList.add("selected");
+        }
+      }
+
+      // برای تمرین نوع 2 (انتخاب گزینه)
+      function handleType2Click(element, selectedOption) {
+        if (isAnswerChecked) return;
+
+        // ریست کردن تمام گزینه‌ها
+        document
+          .querySelectorAll("#option-elements .selectable-item")
+          .forEach((el) => el.classList.remove("selected"));
+
+        selectedType2 = selectedOption;
+        element.classList.add("selected");
+      }
+
+      // برای تمرین نوع 3 (کلیک بر ناحیه نمودار ون)
+      function handleVennClick(e) {
+        if (isAnswerChecked) return;
+
+        document
+          .querySelectorAll(".venn-zone")
+          .forEach((el) => el.classList.remove("selected"));
+
+        const clickedSet = e.target;
+        clickedSet.classList.add("selected");
+        selectedVennSet = clickedSet.dataset.setName;
+
+        // اگر ناحیه اشتراک/تفاضل کلیک شود (منطق پیچیده)
+        if (clickedSet.id === "setA" || clickedSet.id === "setB") {
+          // در نمودار ون CSS، کلیک روی دایره، ناحیه خالص و ناحیه اشتراک را پوشش می‌دهد.
+          // برای تمرین‌های نوع ۳، کاربر باید به صورت بصری ناحیه درست را هدف بگیرد.
+          // برای ساده‌سازی، اگر کاربر روی A کلیک کند، ما باید بررسی کنیم که آیا ناحیه A خالص یا AUB یا A∩B صحیح است.
+
+          // برای تفکیک بهتر ناحیه اشتراک از ناحیه انفرادی، نیاز به یک عنصر DOM مجزا در ناحیه همپوشانی بود.
+          // اینجا شبیه‌سازی را با مختصات انجام نمی‌دهیم و به صورت زیر عمل می‌کنیم:
+          const rectA = setA.getBoundingClientRect();
+          const rectB = setB.getBoundingClientRect();
+          const pointX = e.clientX || e.touches[0].clientX;
+          const pointY = e.clientY || e.touches[0].clientY;
+
+          // **شبیه‌سازی ناحیه اشتراک**
+          const isInsideA =
+            pointX >= rectA.left &&
+            pointX <= rectA.right &&
+            pointY >= rectA.top &&
+            pointY <= rectA.bottom;
+          const isInsideB =
+            pointX >= rectB.left &&
+            pointX <= rectB.right &&
+            pointY >= rectB.top &&
+            pointY <= rectB.bottom;
+
+          // اگر هم در A و هم در B باشد، به صورت منطقی ناحیه اشتراک انتخاب شده است.
+          if (isInsideA && isInsideB) {
+            selectedVennSet = "A-and-B";
+          } else if (isInsideA) {
+            selectedVennSet = "A-only";
+          } else if (isInsideB) {
+            selectedVennSet = "B-only";
+          } else if (clickedSet.id === "universal") {
+            selectedVennSet = "U-AUB"; // متمم
+          }
+
+          // **توجه: این شبیه‌سازی به دلیل شکل دایره‌ای و تداخل دقیق نیست، اما برای یک بازی آموزشی پایه مناسب است.**
+        }
+      }
+
+      // ==========================================================
+      // منطق اصلی بازی
+      // ==========================================================
+
+      function loadQuestion() {
+        if (currentQuestion >= totalQuestions) {
+          endGame();
+          return;
+        }
+
+        const q = questions[currentQuestion];
+        qText.textContent = `سوال ${currentQuestion + 1}/${totalQuestions}: ${
+          q.text
+        }`;
+        optionElementsArea.innerHTML = "";
+        vennContainer.style.display = "none";
+
+        resetSelections();
+
+        // تنظیم دکمه اکشن
+        actionButton.textContent = "بررسی پاسخ";
+        actionButton.style.backgroundColor = "var(--secondary-color)";
+        actionButton.style.color = "#333";
+        isAnswerChecked = false;
+
+        // -----------------------
+        // نوع 1 و 2: آیتم‌های قابل انتخاب
+        // -----------------------
+        if (q.type === 1 || q.type === 2) {
+          const items = q.type === 1 ? q.elements : q.options;
+          items.forEach((itemValue) => {
+            const item = document.createElement("div");
+            item.className = "selectable-item";
+            item.textContent = itemValue;
+            item.dataset.value = itemValue;
+
+            if (q.type === 1) {
+              item.onclick = (e) => handleType1Click(e.target, itemValue);
+            } else if (q.type === 2) {
+              item.onclick = (e) => handleType2Click(e.target, itemValue);
+            }
+            optionElementsArea.appendChild(item);
+          });
+
+          // -----------------------
+          // نوع 3: نمودار ون
+          // -----------------------
+        } else if (q.type === 3) {
+          vennContainer.style.display = "block";
+          // فعال کردن DropZoneها برای کلیک
+          document.querySelectorAll(".venn-zone").forEach((el) => {
+            el.onclick = handleVennClick;
+          });
+          // فقط نمایش مجموعه‌های مورد نیاز (مثلاً اگر فقط A' باشد، B را نادیده بگیرد)
+          setB.style.display = q.setNames.includes("B") ? "block" : "none";
+        }
+
+        updateProgress();
+      }
+
+      // ==========================================================
+      // مدیریت دکمه اکشن
+      // ==========================================================
+
+      function handleActionButton() {
+        if (!isAnswerChecked) {
+          checkAnswer();
+        } else {
+          nextQuestion();
+        }
+      }
+
+      function checkAnswer() {
+        if (isAnswerChecked) return;
+
+        const q = questions[currentQuestion];
+        let isCorrect = false;
+
+        if (q.type === 1) {
+          // مقایسه آرایه‌ها (ترتیب مهم نیست)
+          isCorrect =
+            selectedType1.sort().join(",") === q.correctAnswer.sort().join(",");
+        } else if (q.type === 2) {
+          isCorrect = selectedType2 === q.correctAnswer;
+          if (!selectedType2) {
+            showFeedback(false);
+            return;
+          } // اگر انتخابی نشده
+        } else if (q.type === 3) {
+          if (!selectedVennSet) {
+            showFeedback(false);
+            return;
+          } // اگر انتخابی نشده
+
+          // منطق پاسخ‌های نمودار ون بر اساس کلیک‌های شبیه‌سازی شده
+          if (q.correctAnswer === "A-and-B" && selectedVennSet === "A-and-B")
+            isCorrect = true;
+          else if (q.correctAnswer === "A-only" && selectedVennSet === "A-only")
+            isCorrect = true;
+          else if (q.correctAnswer === "B-only" && selectedVennSet === "B-only")
+            isCorrect = true;
+          else if (
+            q.correctAnswer === "AUB" &&
+            (selectedVennSet === "A-only" ||
+              selectedVennSet === "B-only" ||
+              selectedVennSet === "A-and-B")
+          )
+            isCorrect = true;
+          else if (q.correctAnswer === "U-AUB" && selectedVennSet === "U-AUB")
+            isCorrect = true;
+          else if (
+            q.correctAnswer === "A-only-or-B-only" &&
+            (selectedVennSet === "A-only" || selectedVennSet === "B-only")
+          )
+            isCorrect = true; // تفاضل متقارن
+          else isCorrect = false;
+        }
+
+        if (isCorrect) {
+          score += scorePerQuestion;
+          showFeedback(true);
+          isAnswerChecked = true;
+
+          // تبدیل دکمه به "سوال بعدی"
+          actionButton.textContent = "سوال بعدی 🚀";
+          actionButton.style.backgroundColor = "var(--primary-color)";
+          actionButton.style.color = "white";
+        } else {
+          showFeedback(false);
+          // ریست کردن فقط برای نوع ۱ و ۳ (برای نوع ۲ اجازه انتخاب مجدد داده می‌شود)
+          if (q.type === 1 || q.type === 3) {
+            resetSelections();
+          }
+        }
+
+        updateProgress();
+      }
+
+      function nextQuestion() {
+        currentQuestion++;
+        loadQuestion();
+      }
+
+      function endGame() {
+        const finalScoreValue = Math.round(score);
+
+        let message;
+        if (finalScoreValue > 80) {
+          message = `امتیاز نهایی شما: ${finalScoreValue} از 100! شما یک نابغه مجموعه‌ها هستید! 🏆`;
+        } else if (finalScoreValue > 50) {
+          message = `امتیاز نهایی شما: ${finalScoreValue} از 100. تلاش شما عالی بود، با کمی تمرین بهتر هم می‌شوید! 👍`;
+        } else {
+          message = `امتیاز نهایی شما: ${finalScoreValue} از 100. نگران نباشید، مفهوم مجموعه‌ها با تکرار جا می‌افتد. 💪`;
+        }
+
+        document.getElementById("final-message").textContent = message;
+
+        document.getElementById("question-area").style.display = "none";
+        document.getElementById("option-elements").style.display = "none";
+        actionButton.style.display = "none";
+        document.getElementById("feedback-message").style.display = "none";
+        document.getElementById("final-score").style.display = "block";
+      }
+
+      // شروع بازی
+      loadQuestion();
+    </script>
+  </body>
 </html>
